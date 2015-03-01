@@ -1,0 +1,75 @@
+#!/bin/bash
+export RML_PCRE_LIB=/proc/self/root/usr/local/lib
+export RML_PCRE_INCLUDE=/proc/self/root/usr/local/include
+export RML=/home/teal/morph/aot
+echo "RML variables set"
+#####################################
+
+from=terms_kio_core_1100.dic	
+to=evristic_1-inf.dic
+#dlina-4astota
+#####################################3
+
+
+rm -f *.olm
+cat $from predl.dic | sort | uniq | sed '/^$/d' > tmp.dic
+for filename in *.txt
+do
+	echo "Preparing " $filename
+    ./rusclear < $filename > $filename.rus
+	iconv -f utf-8 -t cp1251 $filename.rus -o $filename-cp1251.rus	
+done
+echo "Input files ready"
+ls *-cp1251.rus > files.dat
+./filetestlem_input_generator < files.dat > tmp.sh
+chmod a+x tmp.sh
+./tmp.sh
+echo "Morph analisys finished"
+for filename in *.txt
+do	
+    echo "Output clearing for " $filename.lem 
+	iconv -f cp1251 -t utf-8 $filename-cp1251.lem -o $filename.lem
+	./morph_cleaner <$filename.lem >$filename.end2
+	#sed -e 's/[^а-яА-Я0-9-]//g' $filename.end3 > $filename.end2
+	sed -e 's/[^а-яА-Я ]/ /g' $filename.end2  | sed  -e 's/  / /g' | sed  -e 's/ /\n/g' | sed '/^$/d' > $filename.end	
+	sort $filename.end > $filename-o.lem
+    ./dictionary_complementation tmp.dic $filename-o.lem $filename.olm 
+    rename s/.txt.olm/.olm/g $filename.olm 
+done
+rm -f tmp.dic
+cat *.olm | sed -e '/=Delimeter=/d' > olmu.dat
+sort olmu.dat | uniq -c | sort -gr | sed -e 's/^ *//' > index1.dic
+##
+i=2
+#_e
+#sed -e '/^1 /d' index1.dic | sed -e '/^[23] ....$/d' | sed -e '/^[23456] ...$/d' | sed -e '/^[23456789] ..$/d' | sed -e '/ .$/d' > index2.dic
+
+
+sed -e '/^ ./d' index1.dic > index2.dic
+
+
+
+
+
+
+#_e2
+#sed -e '/[аеёиоуыэюяьъАЕЁИОУЫЭЮЯЬЪ][ъьЪЬ]/d' index2.dic | sed -e '/[ъЪ][а-дж-эА-ДЖ-Э]/d' | sed -e '/[чщЧЩ][яюЯЮ]/d' | sed -e '/[чЧ][ьЬ][кКнН]/d'  |  sed -e '/[щЩ][Ьь][Нн]/d' | sed -e '/[жЖшШ][ыЫ]/d' | sed -e '/[йЙ][йЙ]/d' | sed -e '/[ыЫ][ыЫ]/d' | sed -e '/ [ьЬъЪыЫ]/d' > index3.dic
+#_e*
+sed -e 's/[^а-яА-Я]//g' index2.dic | sort > $to
+#
+#sed -e 's/[^а-яА-Я]//g' index1.dic | sort > $to
+
+##
+#йй, ьь, ъъ, ыы
+#[ч,щ][я,ю]
+#[жш]ы
+#чь[к,н], щьн
+#[а,е,ё,и,о,у,ы,э,ю,я]ъ
+#[а,е,ё,и,о,у,ы,э,ю,я]ь
+#ъ[а-д], ъ[ж-э]
+
+rm *.olm
+rm *.rus
+rm *.lem
+rm *.end
+rm *.end2
